@@ -12,6 +12,7 @@ import {
   repoHasYarnBerryManagedDependencies,
   PackageManagerInfo
 } from './cache-utils.js';
+import * as custom from "./custom/cache.js";
 
 export const restoreCache = async (
   packageManager: string,
@@ -56,9 +57,17 @@ export const restoreCache = async (
     core.info(
       'All dependencies are managed locally by yarn3, the previous cache can be used'
     );
-    cacheKey = await cache.restoreCache(cachePaths, primaryKey, [keyPrefix]);
+    if (core.getBooleanInput('custom')) {
+      cacheKey = await custom.restoreCache(cachePaths, primaryKey, [keyPrefix]);
+    } else { 
+      cacheKey = await cache.restoreCache(cachePaths, primaryKey, [keyPrefix]);
+    }
   } else {
-    cacheKey = await cache.restoreCache(cachePaths, primaryKey);
+    if (core.getBooleanInput('custom')) {
+      cacheKey = await custom.restoreCache(cachePaths, primaryKey);
+    } else { 
+      cacheKey = await cache.restoreCache(cachePaths, primaryKey);
+    }
   }
 
   core.setOutput('cache-hit', Boolean(cacheKey));

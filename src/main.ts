@@ -11,8 +11,11 @@ import {isCacheFeatureAvailable} from './cache-utils.js';
 import {getNodejsDistribution} from './distributions/installer-factory.js';
 import {getNodeVersionFromFile, printEnvDetailsAndSetOutput} from './util.js';
 import {State} from './constants.js';
+import * as custom from "./custom/cache.js";
 
 export async function run() {
+  const baseTag = 'v7.0.0';
+  core.info(`sgnus-k8s/setup-node@use-cache: based on actions/setup-node@${baseTag}`);
   try {
     //
     // Version is optional.  If supplied, install / use from the tool cache
@@ -69,7 +72,7 @@ export async function run() {
 
     const cacheDependencyPath = core.getInput('cache-dependency-path');
 
-    if (isCacheFeatureAvailable()) {
+    if (isCacheFeatureAvailable() || core.getBooleanInput('custom')) {
       // if the cache input is provided, use it for caching.
       if (cache) {
         core.saveState(State.CachePackageManager, cache);
