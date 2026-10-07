@@ -3,6 +3,7 @@ import * as cache from '@actions/cache';
 
 import {State} from './constants.js';
 import {getPackageManagerInfo} from './cache-utils.js';
+import * as custom from "./custom/cache.js";
 
 // Catch and log any unhandled exceptions.  These exceptions can leak out of the uploadChunk method in
 // @actions/toolkit when a failed upload closes the file descriptor causing any in-process reads to
@@ -15,6 +16,8 @@ process.on('uncaughtException', e => {
 
 // Added early exit to resolve issue with slow post action step:
 export async function run(earlyExit?: boolean) {
+  const baseTag = 'v7.0.0';
+  core.info(`sgnus-k8s/setup-node@use-cache: based on actions/setup-node@${baseTag}`);
   try {
     const cacheLock = core.getState(State.CachePackageManager);
 
@@ -61,7 +64,12 @@ const cachePackages = async (packageManager: string) => {
     return;
   }
 
-  const cacheId = await cache.saveCache(cachePaths, primaryKey);
+  let cacheId;
+  if (core.getBooleanInput('custom')) {
+    cacheId = await custom.saveCache(cachePaths, primaryKey);
+  } else {
+    cacheId = await cache.saveCache(cachePaths, primaryKey);
+  }
   if (cacheId === -1) {
     // saveCache returns -1 without throwing when the cache was not saved, e.g.
     // a reserve collision or a read-only token (fork PR). @actions/cache has
