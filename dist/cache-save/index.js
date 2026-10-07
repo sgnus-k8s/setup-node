@@ -42469,7 +42469,7 @@ function safeTrimTrailingSeparator(p) {
 /**
  * Indicates whether a pattern matches a path
  */
-var internal_match_kind_MatchKind;
+var MatchKind;
 (function (MatchKind) {
     /** Not matched */
     MatchKind[MatchKind["None"] = 0] = "None";
@@ -42479,7 +42479,7 @@ var internal_match_kind_MatchKind;
     MatchKind[MatchKind["File"] = 2] = "File";
     /** Matched */
     MatchKind[MatchKind["All"] = 3] = "All";
-})(internal_match_kind_MatchKind || (internal_match_kind_MatchKind = {}));
+})(MatchKind || (MatchKind = {}));
 //# sourceMappingURL=internal-match-kind.js.map
 ;// CONCATENATED MODULE: ./node_modules/@actions/cache/node_modules/@actions/glob/lib/internal-pattern-helper.js
 
@@ -42533,7 +42533,7 @@ function getSearchPaths(patterns) {
  * Matches the patterns against the path
  */
 function internal_pattern_helper_match(patterns, itemPath) {
-    let result = internal_match_kind_MatchKind.None;
+    let result = MatchKind.None;
     for (const pattern of patterns) {
         if (pattern.negate) {
             result &= ~pattern.match(itemPath);
@@ -42561,7 +42561,7 @@ const internal_path_IS_WINDOWS = process.platform === 'win32';
 /**
  * Helper class for parsing paths into segments
  */
-class internal_path_Path {
+class Path {
     /**
      * Constructs a Path
      * @param itemPath Path or array of segments
@@ -42649,9 +42649,9 @@ class internal_path_Path {
 
 
 
-const { Minimatch: internal_pattern_Minimatch } = minimatch;
+const { Minimatch } = minimatch;
 const internal_pattern_IS_WINDOWS = process.platform === 'win32';
-class internal_pattern_Pattern {
+class Pattern {
     constructor(patternOrNegate, isImplicitPattern = false, segments, homedir) {
         /**
          * Indicates whether matches should be excluded from the result set
@@ -42667,9 +42667,9 @@ class internal_pattern_Pattern {
             // Convert to pattern
             segments = segments || [];
             external_assert_(segments.length, `Parameter 'segments' must not empty`);
-            const root = internal_pattern_Pattern.getLiteral(segments[0]);
+            const root = Pattern.getLiteral(segments[0]);
             external_assert_(root && hasAbsoluteRoot(root), `Parameter 'segments' first element must be a root path`);
-            pattern = new internal_path_Path(segments).toString().trim();
+            pattern = new Path(segments).toString().trim();
             if (patternOrNegate) {
                 pattern = `!${pattern}`;
             }
@@ -42680,9 +42680,9 @@ class internal_pattern_Pattern {
             pattern = pattern.substr(1).trim();
         }
         // Normalize slashes and ensures absolute root
-        pattern = internal_pattern_Pattern.fixupPattern(pattern, homedir);
+        pattern = Pattern.fixupPattern(pattern, homedir);
         // Segments
-        this.segments = new internal_path_Path(pattern).segments;
+        this.segments = new Path(pattern).segments;
         // Trailing slash indicates the pattern should only match directories, not regular files
         this.trailingSeparator = internal_path_helper_normalizeSeparators(pattern)
             .endsWith(external_path_.sep);
@@ -42690,11 +42690,11 @@ class internal_pattern_Pattern {
         // Search path (literal path prior to the first glob segment)
         let foundGlob = false;
         const searchSegments = this.segments
-            .map(x => internal_pattern_Pattern.getLiteral(x))
+            .map(x => Pattern.getLiteral(x))
             .filter(x => !foundGlob && !(foundGlob = x === ''));
-        this.searchPath = new internal_path_Path(searchSegments).toString();
+        this.searchPath = new Path(searchSegments).toString();
         // Root RegExp (required when determining partial match)
-        this.rootRegExp = new RegExp(internal_pattern_Pattern.regExpEscape(searchSegments[0]), internal_pattern_IS_WINDOWS ? 'i' : '');
+        this.rootRegExp = new RegExp(Pattern.regExpEscape(searchSegments[0]), internal_pattern_IS_WINDOWS ? 'i' : '');
         this.isImplicitPattern = isImplicitPattern;
         // Create minimatch
         const minimatchOptions = {
@@ -42706,7 +42706,7 @@ class internal_pattern_Pattern {
             nonegate: true
         };
         pattern = internal_pattern_IS_WINDOWS ? pattern.replace(/\\/g, '/') : pattern;
-        this.minimatch = new internal_pattern_Minimatch(pattern, minimatchOptions);
+        this.minimatch = new Minimatch(pattern, minimatchOptions);
     }
     /**
      * Matches the pattern against the specified path
@@ -42731,9 +42731,9 @@ class internal_pattern_Pattern {
         }
         // Match
         if (this.minimatch.match(itemPath)) {
-            return this.trailingSeparator ? internal_match_kind_MatchKind.Directory : internal_match_kind_MatchKind.All;
+            return this.trailingSeparator ? MatchKind.Directory : MatchKind.All;
         }
-        return internal_match_kind_MatchKind.None;
+        return MatchKind.None;
     }
     /**
      * Indicates whether the pattern may match descendants of the specified path
@@ -42764,7 +42764,7 @@ class internal_pattern_Pattern {
         external_assert_(pattern, 'pattern cannot be empty');
         // Must not contain `.` segment, unless first segment
         // Must not contain `..` segment
-        const literalSegments = new internal_path_Path(pattern).segments.map(x => internal_pattern_Pattern.getLiteral(x));
+        const literalSegments = new Path(pattern).segments.map(x => Pattern.getLiteral(x));
         external_assert_(literalSegments.every((x, i) => (x !== '.' || i === 0) && x !== '..'), `Invalid pattern '${pattern}'. Relative pathing '.' and '..' is not allowed.`);
         // Must not contain globs in root, e.g. Windows UNC path \\foo\b*r
         external_assert_(!hasRoot(pattern) || literalSegments[0], `Invalid pattern '${pattern}'. Root segment must not contain globs.`);
@@ -42772,14 +42772,14 @@ class internal_pattern_Pattern {
         pattern = internal_path_helper_normalizeSeparators(pattern);
         // Replace leading `.` segment
         if (pattern === '.' || pattern.startsWith(`.${external_path_.sep}`)) {
-            pattern = internal_pattern_Pattern.globEscape(process.cwd()) + pattern.substr(1);
+            pattern = Pattern.globEscape(process.cwd()) + pattern.substr(1);
         }
         // Replace leading `~` segment
         else if (pattern === '~' || pattern.startsWith(`~${external_path_.sep}`)) {
             homedir = homedir || external_os_.homedir();
             external_assert_(homedir, 'Unable to determine HOME directory');
             external_assert_(hasAbsoluteRoot(homedir), `Expected HOME directory to be a rooted path. Actual '${homedir}'`);
-            pattern = internal_pattern_Pattern.globEscape(homedir) + pattern.substr(1);
+            pattern = Pattern.globEscape(homedir) + pattern.substr(1);
         }
         // Replace relative drive root, e.g. pattern is C: or C:foo
         else if (internal_pattern_IS_WINDOWS &&
@@ -42788,7 +42788,7 @@ class internal_pattern_Pattern {
             if (pattern.length > 2 && !root.endsWith('\\')) {
                 root += '\\';
             }
-            pattern = internal_pattern_Pattern.globEscape(root) + pattern.substr(2);
+            pattern = Pattern.globEscape(root) + pattern.substr(2);
         }
         // Replace relative root, e.g. pattern is \ or \foo
         else if (internal_pattern_IS_WINDOWS && (pattern === '\\' || pattern.match(/^\\[^\\]/))) {
@@ -42796,11 +42796,11 @@ class internal_pattern_Pattern {
             if (!root.endsWith('\\')) {
                 root += '\\';
             }
-            pattern = internal_pattern_Pattern.globEscape(root) + pattern.substr(1);
+            pattern = Pattern.globEscape(root) + pattern.substr(1);
         }
         // Otherwise ensure absolute root
         else {
-            pattern = ensureAbsoluteRoot(internal_pattern_Pattern.globEscape(process.cwd()), pattern);
+            pattern = ensureAbsoluteRoot(Pattern.globEscape(process.cwd()), pattern);
         }
         return internal_path_helper_normalizeSeparators(pattern);
     }
@@ -42872,7 +42872,7 @@ class internal_pattern_Pattern {
 }
 //# sourceMappingURL=internal-pattern.js.map
 ;// CONCATENATED MODULE: ./node_modules/@actions/cache/node_modules/@actions/glob/lib/internal-search-state.js
-class internal_search_state_SearchState {
+class SearchState {
     constructor(path, level) {
         this.path = path;
         this.level = level;
@@ -42918,7 +42918,7 @@ var __asyncGenerator = (undefined && undefined.__asyncGenerator) || function (th
 
 
 const internal_globber_IS_WINDOWS = process.platform === 'win32';
-class internal_globber_DefaultGlobber {
+class DefaultGlobber {
     constructor(options) {
         this.patterns = [];
         this.searchPaths = [];
@@ -42961,7 +42961,7 @@ class internal_globber_DefaultGlobber {
                 if (options.implicitDescendants &&
                     (pattern.trailingSeparator ||
                         pattern.segments[pattern.segments.length - 1] !== '**')) {
-                    patterns.push(new internal_pattern_Pattern(pattern.negate, true, pattern.segments.concat('**')));
+                    patterns.push(new Pattern(pattern.negate, true, pattern.segments.concat('**')));
                 }
             }
             // Push the search paths
@@ -42980,7 +42980,7 @@ class internal_globber_DefaultGlobber {
                     }
                     throw err;
                 }
-                stack.unshift(new internal_search_state_SearchState(searchPath, 1));
+                stack.unshift(new SearchState(searchPath, 1));
             }
             // Search
             const traversalChain = []; // used to detect cycles
@@ -42994,7 +42994,7 @@ class internal_globber_DefaultGlobber {
                     continue;
                 }
                 // Stat
-                const stats = yield __await(internal_globber_DefaultGlobber.stat(item, options, traversalChain)
+                const stats = yield __await(DefaultGlobber.stat(item, options, traversalChain)
                 // Broken symlink, or symlink cycle detected, or no longer exists
                 );
                 // Broken symlink, or symlink cycle detected, or no longer exists
@@ -43008,7 +43008,7 @@ class internal_globber_DefaultGlobber {
                 // Directory
                 if (stats.isDirectory()) {
                     // Matched
-                    if (match & internal_match_kind_MatchKind.Directory && options.matchDirectories) {
+                    if (match & MatchKind.Directory && options.matchDirectories) {
                         yield yield __await(item.path);
                     }
                     // Descend?
@@ -43017,11 +43017,11 @@ class internal_globber_DefaultGlobber {
                     }
                     // Push the child items in reverse
                     const childLevel = item.level + 1;
-                    const childItems = (yield __await(external_fs_namespaceObject.promises.readdir(item.path))).map(x => new internal_search_state_SearchState(external_path_.join(item.path, x), childLevel));
+                    const childItems = (yield __await(external_fs_namespaceObject.promises.readdir(item.path))).map(x => new SearchState(external_path_.join(item.path, x), childLevel));
                     stack.push(...childItems.reverse());
                 }
                 // File
-                else if (match & internal_match_kind_MatchKind.File) {
+                else if (match & MatchKind.File) {
                     yield yield __await(item.path);
                 }
             }
@@ -43032,7 +43032,7 @@ class internal_globber_DefaultGlobber {
      */
     static create(patterns, options) {
         return internal_globber_awaiter(this, void 0, void 0, function* () {
-            const result = new internal_globber_DefaultGlobber(options);
+            const result = new DefaultGlobber(options);
             if (internal_globber_IS_WINDOWS) {
                 patterns = patterns.replace(/\r\n/g, '\n');
                 patterns = patterns.replace(/\r/g, '\n');
@@ -43045,7 +43045,7 @@ class internal_globber_DefaultGlobber {
                 }
                 // Pattern
                 else {
-                    result.patterns.push(new internal_pattern_Pattern(line));
+                    result.patterns.push(new Pattern(line));
                 }
             }
             result.searchPaths.push(...getSearchPaths(result.patterns));
@@ -43200,7 +43200,7 @@ var glob_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arg
  */
 function create(patterns, options) {
     return glob_awaiter(this, void 0, void 0, function* () {
-        return yield internal_globber_DefaultGlobber.create(patterns, options);
+        return yield DefaultGlobber.create(patterns, options);
     });
 }
 /**
@@ -89203,23 +89203,23 @@ function internal_glob_options_helper_getOptions(copy) {
     if (copy) {
         if (typeof copy.followSymbolicLinks === 'boolean') {
             result.followSymbolicLinks = copy.followSymbolicLinks;
-            core.debug(`followSymbolicLinks '${result.followSymbolicLinks}'`);
+            core_debug(`followSymbolicLinks '${result.followSymbolicLinks}'`);
         }
         if (typeof copy.implicitDescendants === 'boolean') {
             result.implicitDescendants = copy.implicitDescendants;
-            core.debug(`implicitDescendants '${result.implicitDescendants}'`);
+            core_debug(`implicitDescendants '${result.implicitDescendants}'`);
         }
         if (typeof copy.matchDirectories === 'boolean') {
             result.matchDirectories = copy.matchDirectories;
-            core.debug(`matchDirectories '${result.matchDirectories}'`);
+            core_debug(`matchDirectories '${result.matchDirectories}'`);
         }
         if (typeof copy.omitBrokenSymbolicLinks === 'boolean') {
             result.omitBrokenSymbolicLinks = copy.omitBrokenSymbolicLinks;
-            core.debug(`omitBrokenSymbolicLinks '${result.omitBrokenSymbolicLinks}'`);
+            core_debug(`omitBrokenSymbolicLinks '${result.omitBrokenSymbolicLinks}'`);
         }
         if (typeof copy.excludeHiddenFiles === 'boolean') {
             result.excludeHiddenFiles = copy.excludeHiddenFiles;
-            core.debug(`excludeHiddenFiles '${result.excludeHiddenFiles}'`);
+            core_debug(`excludeHiddenFiles '${result.excludeHiddenFiles}'`);
         }
     }
     return result;
@@ -89254,7 +89254,7 @@ function internal_path_helper_dirname(p) {
         return p;
     }
     // Get dirname
-    let result = path.dirname(p);
+    let result = external_path_.dirname(p);
     // Trim trailing slash for Windows UNC root, e.g. \\hello\world\
     if (lib_internal_path_helper_IS_WINDOWS && /^\\\\[^\\]+\\[^\\]+\\$/.test(result)) {
         result = internal_path_helper_safeTrimTrailingSeparator(result);
@@ -89266,8 +89266,8 @@ function internal_path_helper_dirname(p) {
  * or `C:` are expanded based on the current working directory.
  */
 function internal_path_helper_ensureAbsoluteRoot(root, itemPath) {
-    assert(root, `ensureAbsoluteRoot parameter 'root' must not be empty`);
-    assert(itemPath, `ensureAbsoluteRoot parameter 'itemPath' must not be empty`);
+    external_assert_(root, `ensureAbsoluteRoot parameter 'root' must not be empty`);
+    external_assert_(itemPath, `ensureAbsoluteRoot parameter 'itemPath' must not be empty`);
     // Already rooted
     if (internal_path_helper_hasAbsoluteRoot(itemPath)) {
         return itemPath;
@@ -89277,7 +89277,7 @@ function internal_path_helper_ensureAbsoluteRoot(root, itemPath) {
         // Check for itemPath like C: or C:foo
         if (itemPath.match(/^[A-Z]:[^\\/]|^[A-Z]:$/i)) {
             let cwd = process.cwd();
-            assert(cwd.match(/^[A-Z]:\\/i), `Expected current directory to start with an absolute drive root. Actual '${cwd}'`);
+            external_assert_(cwd.match(/^[A-Z]:\\/i), `Expected current directory to start with an absolute drive root. Actual '${cwd}'`);
             // Drive letter matches cwd? Expand to cwd
             if (itemPath[0].toUpperCase() === cwd[0].toUpperCase()) {
                 // Drive only, e.g. C:
@@ -89302,18 +89302,18 @@ function internal_path_helper_ensureAbsoluteRoot(root, itemPath) {
         // Check for itemPath like \ or \foo
         else if (lib_internal_path_helper_normalizeSeparators(itemPath).match(/^\\$|^\\[^\\]/)) {
             const cwd = process.cwd();
-            assert(cwd.match(/^[A-Z]:\\/i), `Expected current directory to start with an absolute drive root. Actual '${cwd}'`);
+            external_assert_(cwd.match(/^[A-Z]:\\/i), `Expected current directory to start with an absolute drive root. Actual '${cwd}'`);
             return `${cwd[0]}:\\${itemPath.substr(1)}`;
         }
     }
-    assert(internal_path_helper_hasAbsoluteRoot(root), `ensureAbsoluteRoot parameter 'root' must have an absolute root`);
+    external_assert_(internal_path_helper_hasAbsoluteRoot(root), `ensureAbsoluteRoot parameter 'root' must have an absolute root`);
     // Otherwise ensure root ends with a separator
     if (root.endsWith('/') || (lib_internal_path_helper_IS_WINDOWS && root.endsWith('\\'))) {
         // Intentionally empty
     }
     else {
         // Append separator
-        root += path.sep;
+        root += external_path_.sep;
     }
     return root + itemPath;
 }
@@ -89322,7 +89322,7 @@ function internal_path_helper_ensureAbsoluteRoot(root, itemPath) {
  * `\\hello\share` and `C:\hello` (and using alternate separator).
  */
 function internal_path_helper_hasAbsoluteRoot(itemPath) {
-    assert(itemPath, `hasAbsoluteRoot parameter 'itemPath' must not be empty`);
+    external_assert_(itemPath, `hasAbsoluteRoot parameter 'itemPath' must not be empty`);
     // Normalize separators
     itemPath = lib_internal_path_helper_normalizeSeparators(itemPath);
     // Windows
@@ -89338,7 +89338,7 @@ function internal_path_helper_hasAbsoluteRoot(itemPath) {
  * `\`, `\hello`, `\\hello\share`, `C:`, and `C:\hello` (and using alternate separator).
  */
 function internal_path_helper_hasRoot(itemPath) {
-    assert(itemPath, `isRooted parameter 'itemPath' must not be empty`);
+    external_assert_(itemPath, `isRooted parameter 'itemPath' must not be empty`);
     // Normalize separators
     itemPath = lib_internal_path_helper_normalizeSeparators(itemPath);
     // Windows
@@ -89378,11 +89378,11 @@ function internal_path_helper_safeTrimTrailingSeparator(p) {
     // Normalize separators
     p = lib_internal_path_helper_normalizeSeparators(p);
     // No trailing slash
-    if (!p.endsWith(path.sep)) {
+    if (!p.endsWith(external_path_.sep)) {
         return p;
     }
     // Check '/' on Linux/macOS and '\' on Windows
-    if (p === path.sep) {
+    if (p === external_path_.sep) {
         return p;
     }
     // On Windows check if drive root. E.g. C:\
@@ -89397,7 +89397,7 @@ function internal_path_helper_safeTrimTrailingSeparator(p) {
 /**
  * Indicates whether a pattern matches a path
  */
-var lib_internal_match_kind_MatchKind;
+var internal_match_kind_MatchKind;
 (function (MatchKind) {
     /** Not matched */
     MatchKind[MatchKind["None"] = 0] = "None";
@@ -89407,7 +89407,7 @@ var lib_internal_match_kind_MatchKind;
     MatchKind[MatchKind["File"] = 2] = "File";
     /** Matched */
     MatchKind[MatchKind["All"] = 3] = "All";
-})(lib_internal_match_kind_MatchKind || (lib_internal_match_kind_MatchKind = {}));
+})(internal_match_kind_MatchKind || (internal_match_kind_MatchKind = {}));
 //# sourceMappingURL=internal-match-kind.js.map
 ;// CONCATENATED MODULE: ./node_modules/@actions/glob/lib/internal-pattern-helper.js
 
@@ -89440,14 +89440,14 @@ function internal_pattern_helper_getSearchPaths(patterns) {
         // Check for an ancestor search path
         let foundAncestor = false;
         let tempKey = key;
-        let parent = pathHelper.dirname(tempKey);
+        let parent = internal_path_helper_dirname(tempKey);
         while (parent !== tempKey) {
             if (searchPathMap[parent]) {
                 foundAncestor = true;
                 break;
             }
             tempKey = parent;
-            parent = pathHelper.dirname(tempKey);
+            parent = internal_path_helper_dirname(tempKey);
         }
         // Include the search pattern in the result
         if (!foundAncestor) {
@@ -89460,8 +89460,8 @@ function internal_pattern_helper_getSearchPaths(patterns) {
 /**
  * Matches the patterns against the path
  */
-function match(patterns, itemPath) {
-    let result = MatchKind.None;
+function lib_internal_pattern_helper_match(patterns, itemPath) {
+    let result = internal_match_kind_MatchKind.None;
     for (const pattern of patterns) {
         if (pattern.negate) {
             result &= ~pattern.match(itemPath);
@@ -89475,7 +89475,7 @@ function match(patterns, itemPath) {
 /**
  * Checks whether to descend further into the directory
  */
-function partialMatch(patterns, itemPath) {
+function lib_internal_pattern_helper_partialMatch(patterns, itemPath) {
     return patterns.some(x => !x.negate && x.partialMatch(itemPath));
 }
 //# sourceMappingURL=internal-pattern-helper.js.map
@@ -90961,7 +90961,7 @@ esm_minimatch.braceExpand = braceExpand;
 // default, and can be disabled by setting options.noglobstar.
 const makeRe = (pattern, options = {}) => new esm_Minimatch(pattern, options).makeRe();
 esm_minimatch.makeRe = makeRe;
-const esm_match = (list, pattern, options = {}) => {
+const match = (list, pattern, options = {}) => {
     const mm = new esm_Minimatch(pattern, options);
     list = list.filter(f => mm.match(f));
     if (mm.options.nonull && !list.length) {
@@ -90969,7 +90969,7 @@ const esm_match = (list, pattern, options = {}) => {
     }
     return list;
 };
-esm_minimatch.match = esm_match;
+esm_minimatch.match = match;
 // replace stuff like \* with *
 const globMagic = /[?*]|[+@!]\(.*?\)|\[|\]/;
 const esm_regExpEscape = (s) => s.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
@@ -91917,7 +91917,7 @@ const lib_internal_path_IS_WINDOWS = process.platform === 'win32';
 /**
  * Helper class for parsing paths into segments
  */
-class lib_internal_path_Path {
+class internal_path_Path {
     /**
      * Constructs a Path
      * @param itemPath Path or array of segments
@@ -91926,25 +91926,25 @@ class lib_internal_path_Path {
         this.segments = [];
         // String
         if (typeof itemPath === 'string') {
-            assert(itemPath, `Parameter 'itemPath' must not be empty`);
+            external_assert_(itemPath, `Parameter 'itemPath' must not be empty`);
             // Normalize slashes and trim unnecessary trailing slash
-            itemPath = pathHelper.safeTrimTrailingSeparator(itemPath);
+            itemPath = internal_path_helper_safeTrimTrailingSeparator(itemPath);
             // Not rooted
-            if (!pathHelper.hasRoot(itemPath)) {
-                this.segments = itemPath.split(path.sep);
+            if (!internal_path_helper_hasRoot(itemPath)) {
+                this.segments = itemPath.split(external_path_.sep);
             }
             // Rooted
             else {
                 // Add all segments, while not at the root
                 let remaining = itemPath;
-                let dir = pathHelper.dirname(remaining);
+                let dir = internal_path_helper_dirname(remaining);
                 while (dir !== remaining) {
                     // Add the segment
-                    const basename = path.basename(remaining);
+                    const basename = external_path_.basename(remaining);
                     this.segments.unshift(basename);
                     // Truncate the last segment
                     remaining = dir;
-                    dir = pathHelper.dirname(remaining);
+                    dir = internal_path_helper_dirname(remaining);
                 }
                 // Remainder is the root
                 this.segments.unshift(remaining);
@@ -91953,24 +91953,24 @@ class lib_internal_path_Path {
         // Array
         else {
             // Must not be empty
-            assert(itemPath.length > 0, `Parameter 'itemPath' must not be an empty array`);
+            external_assert_(itemPath.length > 0, `Parameter 'itemPath' must not be an empty array`);
             // Each segment
             for (let i = 0; i < itemPath.length; i++) {
                 let segment = itemPath[i];
                 // Must not be empty
-                assert(segment, `Parameter 'itemPath' must not contain any empty segments`);
+                external_assert_(segment, `Parameter 'itemPath' must not contain any empty segments`);
                 // Normalize slashes
-                segment = pathHelper.normalizeSeparators(itemPath[i]);
+                segment = lib_internal_path_helper_normalizeSeparators(itemPath[i]);
                 // Root segment
-                if (i === 0 && pathHelper.hasRoot(segment)) {
-                    segment = pathHelper.safeTrimTrailingSeparator(segment);
-                    assert(segment === pathHelper.dirname(segment), `Parameter 'itemPath' root segment contains information for multiple segments`);
+                if (i === 0 && internal_path_helper_hasRoot(segment)) {
+                    segment = internal_path_helper_safeTrimTrailingSeparator(segment);
+                    external_assert_(segment === internal_path_helper_dirname(segment), `Parameter 'itemPath' root segment contains information for multiple segments`);
                     this.segments.push(segment);
                 }
                 // All other segments
                 else {
                     // Must not contain slash
-                    assert(!segment.includes(path.sep), `Parameter 'itemPath' contains unexpected path separators`);
+                    external_assert_(!segment.includes(external_path_.sep), `Parameter 'itemPath' contains unexpected path separators`);
                     this.segments.push(segment);
                 }
             }
@@ -91983,13 +91983,13 @@ class lib_internal_path_Path {
         // First segment
         let result = this.segments[0];
         // All others
-        let skipSlash = result.endsWith(path.sep) || (lib_internal_path_IS_WINDOWS && /^[A-Z]:$/i.test(result));
+        let skipSlash = result.endsWith(external_path_.sep) || (lib_internal_path_IS_WINDOWS && /^[A-Z]:$/i.test(result));
         for (let i = 1; i < this.segments.length; i++) {
             if (skipSlash) {
                 skipSlash = false;
             }
             else {
-                result += path.sep;
+                result += external_path_.sep;
             }
             result += this.segments[i];
         }
@@ -92006,7 +92006,7 @@ class lib_internal_path_Path {
 
 
 const lib_internal_pattern_IS_WINDOWS = process.platform === 'win32';
-class lib_internal_pattern_Pattern {
+class internal_pattern_Pattern {
     constructor(patternOrNegate, isImplicitPattern = false, segments, homedir) {
         /**
          * Indicates whether matches should be excluded from the result set
@@ -92021,10 +92021,10 @@ class lib_internal_pattern_Pattern {
         else {
             // Convert to pattern
             segments = segments || [];
-            assert(segments.length, `Parameter 'segments' must not empty`);
-            const root = lib_internal_pattern_Pattern.getLiteral(segments[0]);
-            assert(root && pathHelper.hasAbsoluteRoot(root), `Parameter 'segments' first element must be a root path`);
-            pattern = new Path(segments).toString().trim();
+            external_assert_(segments.length, `Parameter 'segments' must not empty`);
+            const root = internal_pattern_Pattern.getLiteral(segments[0]);
+            external_assert_(root && internal_path_helper_hasAbsoluteRoot(root), `Parameter 'segments' first element must be a root path`);
+            pattern = new internal_path_Path(segments).toString().trim();
             if (patternOrNegate) {
                 pattern = `!${pattern}`;
             }
@@ -92035,22 +92035,21 @@ class lib_internal_pattern_Pattern {
             pattern = pattern.substr(1).trim();
         }
         // Normalize slashes and ensures absolute root
-        pattern = lib_internal_pattern_Pattern.fixupPattern(pattern, homedir);
+        pattern = internal_pattern_Pattern.fixupPattern(pattern, homedir);
         // Segments
-        this.segments = new Path(pattern).segments;
+        this.segments = new internal_path_Path(pattern).segments;
         // Trailing slash indicates the pattern should only match directories, not regular files
-        this.trailingSeparator = pathHelper
-            .normalizeSeparators(pattern)
-            .endsWith(path.sep);
-        pattern = pathHelper.safeTrimTrailingSeparator(pattern);
+        this.trailingSeparator = lib_internal_path_helper_normalizeSeparators(pattern)
+            .endsWith(external_path_.sep);
+        pattern = internal_path_helper_safeTrimTrailingSeparator(pattern);
         // Search path (literal path prior to the first glob segment)
         let foundGlob = false;
         const searchSegments = this.segments
-            .map(x => lib_internal_pattern_Pattern.getLiteral(x))
+            .map(x => internal_pattern_Pattern.getLiteral(x))
             .filter(x => !foundGlob && !(foundGlob = x === ''));
-        this.searchPath = new Path(searchSegments).toString();
+        this.searchPath = new internal_path_Path(searchSegments).toString();
         // Root RegExp (required when determining partial match)
-        this.rootRegExp = new RegExp(lib_internal_pattern_Pattern.regExpEscape(searchSegments[0]), lib_internal_pattern_IS_WINDOWS ? 'i' : '');
+        this.rootRegExp = new RegExp(internal_pattern_Pattern.regExpEscape(searchSegments[0]), lib_internal_pattern_IS_WINDOWS ? 'i' : '');
         this.isImplicitPattern = isImplicitPattern;
         // Create minimatch
         const minimatchOptions = {
@@ -92062,7 +92061,7 @@ class lib_internal_pattern_Pattern {
             nonegate: true
         };
         pattern = lib_internal_pattern_IS_WINDOWS ? pattern.replace(/\\/g, '/') : pattern;
-        this.minimatch = new Minimatch(pattern, minimatchOptions);
+        this.minimatch = new esm_Minimatch(pattern, minimatchOptions);
     }
     /**
      * Matches the pattern against the specified path
@@ -92071,34 +92070,34 @@ class lib_internal_pattern_Pattern {
         // Last segment is globstar?
         if (this.segments[this.segments.length - 1] === '**') {
             // Normalize slashes
-            itemPath = pathHelper.normalizeSeparators(itemPath);
+            itemPath = lib_internal_path_helper_normalizeSeparators(itemPath);
             // Append a trailing slash. Otherwise Minimatch will not match the directory immediately
             // preceding the globstar. For example, given the pattern `/foo/**`, Minimatch returns
             // false for `/foo` but returns true for `/foo/`. Append a trailing slash to handle that quirk.
-            if (!itemPath.endsWith(path.sep) && this.isImplicitPattern === false) {
+            if (!itemPath.endsWith(external_path_.sep) && this.isImplicitPattern === false) {
                 // Note, this is safe because the constructor ensures the pattern has an absolute root.
                 // For example, formats like C: and C:foo on Windows are resolved to an absolute root.
-                itemPath = `${itemPath}${path.sep}`;
+                itemPath = `${itemPath}${external_path_.sep}`;
             }
         }
         else {
             // Normalize slashes and trim unnecessary trailing slash
-            itemPath = pathHelper.safeTrimTrailingSeparator(itemPath);
+            itemPath = internal_path_helper_safeTrimTrailingSeparator(itemPath);
         }
         // Match
         if (this.minimatch.match(itemPath)) {
-            return this.trailingSeparator ? MatchKind.Directory : MatchKind.All;
+            return this.trailingSeparator ? internal_match_kind_MatchKind.Directory : internal_match_kind_MatchKind.All;
         }
-        return MatchKind.None;
+        return internal_match_kind_MatchKind.None;
     }
     /**
      * Indicates whether the pattern may match descendants of the specified path
      */
     partialMatch(itemPath) {
         // Normalize slashes and trim unnecessary trailing slash
-        itemPath = pathHelper.safeTrimTrailingSeparator(itemPath);
+        itemPath = internal_path_helper_safeTrimTrailingSeparator(itemPath);
         // matchOne does not handle root path correctly
-        if (pathHelper.dirname(itemPath) === itemPath) {
+        if (internal_path_helper_dirname(itemPath) === itemPath) {
             return this.rootRegExp.test(itemPath);
         }
         return this.minimatch.matchOne(itemPath.split(lib_internal_pattern_IS_WINDOWS ? /\\+/ : /\/+/), this.minimatch.set[0], true);
@@ -92117,48 +92116,48 @@ class lib_internal_pattern_Pattern {
      */
     static fixupPattern(pattern, homedir) {
         // Empty
-        assert(pattern, 'pattern cannot be empty');
+        external_assert_(pattern, 'pattern cannot be empty');
         // Must not contain `.` segment, unless first segment
         // Must not contain `..` segment
-        const literalSegments = new Path(pattern).segments.map(x => lib_internal_pattern_Pattern.getLiteral(x));
-        assert(literalSegments.every((x, i) => (x !== '.' || i === 0) && x !== '..'), `Invalid pattern '${pattern}'. Relative pathing '.' and '..' is not allowed.`);
+        const literalSegments = new internal_path_Path(pattern).segments.map(x => internal_pattern_Pattern.getLiteral(x));
+        external_assert_(literalSegments.every((x, i) => (x !== '.' || i === 0) && x !== '..'), `Invalid pattern '${pattern}'. Relative pathing '.' and '..' is not allowed.`);
         // Must not contain globs in root, e.g. Windows UNC path \\foo\b*r
-        assert(!pathHelper.hasRoot(pattern) || literalSegments[0], `Invalid pattern '${pattern}'. Root segment must not contain globs.`);
+        external_assert_(!internal_path_helper_hasRoot(pattern) || literalSegments[0], `Invalid pattern '${pattern}'. Root segment must not contain globs.`);
         // Normalize slashes
-        pattern = pathHelper.normalizeSeparators(pattern);
+        pattern = lib_internal_path_helper_normalizeSeparators(pattern);
         // Replace leading `.` segment
-        if (pattern === '.' || pattern.startsWith(`.${path.sep}`)) {
-            pattern = lib_internal_pattern_Pattern.globEscape(process.cwd()) + pattern.substr(1);
+        if (pattern === '.' || pattern.startsWith(`.${external_path_.sep}`)) {
+            pattern = internal_pattern_Pattern.globEscape(process.cwd()) + pattern.substr(1);
         }
         // Replace leading `~` segment
-        else if (pattern === '~' || pattern.startsWith(`~${path.sep}`)) {
-            homedir = homedir || os.homedir();
-            assert(homedir, 'Unable to determine HOME directory');
-            assert(pathHelper.hasAbsoluteRoot(homedir), `Expected HOME directory to be a rooted path. Actual '${homedir}'`);
-            pattern = lib_internal_pattern_Pattern.globEscape(homedir) + pattern.substr(1);
+        else if (pattern === '~' || pattern.startsWith(`~${external_path_.sep}`)) {
+            homedir = homedir || external_os_.homedir();
+            external_assert_(homedir, 'Unable to determine HOME directory');
+            external_assert_(internal_path_helper_hasAbsoluteRoot(homedir), `Expected HOME directory to be a rooted path. Actual '${homedir}'`);
+            pattern = internal_pattern_Pattern.globEscape(homedir) + pattern.substr(1);
         }
         // Replace relative drive root, e.g. pattern is C: or C:foo
         else if (lib_internal_pattern_IS_WINDOWS &&
             (pattern.match(/^[A-Z]:$/i) || pattern.match(/^[A-Z]:[^\\]/i))) {
-            let root = pathHelper.ensureAbsoluteRoot('C:\\dummy-root', pattern.substr(0, 2));
+            let root = internal_path_helper_ensureAbsoluteRoot('C:\\dummy-root', pattern.substr(0, 2));
             if (pattern.length > 2 && !root.endsWith('\\')) {
                 root += '\\';
             }
-            pattern = lib_internal_pattern_Pattern.globEscape(root) + pattern.substr(2);
+            pattern = internal_pattern_Pattern.globEscape(root) + pattern.substr(2);
         }
         // Replace relative root, e.g. pattern is \ or \foo
         else if (lib_internal_pattern_IS_WINDOWS && (pattern === '\\' || pattern.match(/^\\[^\\]/))) {
-            let root = pathHelper.ensureAbsoluteRoot('C:\\dummy-root', '\\');
+            let root = internal_path_helper_ensureAbsoluteRoot('C:\\dummy-root', '\\');
             if (!root.endsWith('\\')) {
                 root += '\\';
             }
-            pattern = lib_internal_pattern_Pattern.globEscape(root) + pattern.substr(1);
+            pattern = internal_pattern_Pattern.globEscape(root) + pattern.substr(1);
         }
         // Otherwise ensure absolute root
         else {
-            pattern = pathHelper.ensureAbsoluteRoot(lib_internal_pattern_Pattern.globEscape(process.cwd()), pattern);
+            pattern = internal_path_helper_ensureAbsoluteRoot(internal_pattern_Pattern.globEscape(process.cwd()), pattern);
         }
-        return pathHelper.normalizeSeparators(pattern);
+        return lib_internal_path_helper_normalizeSeparators(pattern);
     }
     /**
      * Attempts to unescape a pattern segment to create a literal path segment.
@@ -92227,6 +92226,14 @@ class lib_internal_pattern_Pattern {
     }
 }
 //# sourceMappingURL=internal-pattern.js.map
+;// CONCATENATED MODULE: ./node_modules/@actions/glob/lib/internal-search-state.js
+class internal_search_state_SearchState {
+    constructor(path, level) {
+        this.path = path;
+        this.level = level;
+    }
+}
+//# sourceMappingURL=internal-search-state.js.map
 ;// CONCATENATED MODULE: ./node_modules/@actions/glob/lib/internal-globber.js
 var lib_internal_globber_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
@@ -92266,11 +92273,11 @@ var internal_globber_asyncGenerator = (undefined && undefined.__asyncGenerator) 
 
 
 const lib_internal_globber_IS_WINDOWS = process.platform === 'win32';
-class lib_internal_globber_DefaultGlobber {
+class internal_globber_DefaultGlobber {
     constructor(options) {
         this.patterns = [];
         this.searchPaths = [];
-        this.options = globOptionsHelper.getOptions(options);
+        this.options = internal_glob_options_helper_getOptions(options);
     }
     getSearchPaths() {
         // Return a copy
@@ -92301,7 +92308,7 @@ class lib_internal_globber_DefaultGlobber {
     globGenerator() {
         return internal_globber_asyncGenerator(this, arguments, function* globGenerator_1() {
             // Fill in defaults options
-            const options = globOptionsHelper.getOptions(this.options);
+            const options = internal_glob_options_helper_getOptions(this.options);
             // Implicit descendants?
             const patterns = [];
             for (const pattern of this.patterns) {
@@ -92309,18 +92316,18 @@ class lib_internal_globber_DefaultGlobber {
                 if (options.implicitDescendants &&
                     (pattern.trailingSeparator ||
                         pattern.segments[pattern.segments.length - 1] !== '**')) {
-                    patterns.push(new Pattern(pattern.negate, true, pattern.segments.concat('**')));
+                    patterns.push(new internal_pattern_Pattern(pattern.negate, true, pattern.segments.concat('**')));
                 }
             }
             // Push the search paths
             const stack = [];
-            for (const searchPath of patternHelper.getSearchPaths(patterns)) {
-                core.debug(`Search path '${searchPath}'`);
+            for (const searchPath of internal_pattern_helper_getSearchPaths(patterns)) {
+                core_debug(`Search path '${searchPath}'`);
                 // Exists?
                 try {
                     // Intentionally using lstat. Detection for broken symlink
                     // will be performed later (if following symlinks).
-                    yield internal_globber_await(fs.promises.lstat(searchPath));
+                    yield internal_globber_await(external_fs_namespaceObject.promises.lstat(searchPath));
                 }
                 catch (err) {
                     if (err.code === 'ENOENT') {
@@ -92328,7 +92335,7 @@ class lib_internal_globber_DefaultGlobber {
                     }
                     throw err;
                 }
-                stack.unshift(new SearchState(searchPath, 1));
+                stack.unshift(new internal_search_state_SearchState(searchPath, 1));
             }
             // Search
             const traversalChain = []; // used to detect cycles
@@ -92336,13 +92343,13 @@ class lib_internal_globber_DefaultGlobber {
                 // Pop
                 const item = stack.pop();
                 // Match?
-                const match = patternHelper.match(patterns, item.path);
-                const partialMatch = !!match || patternHelper.partialMatch(patterns, item.path);
+                const match = lib_internal_pattern_helper_match(patterns, item.path);
+                const partialMatch = !!match || lib_internal_pattern_helper_partialMatch(patterns, item.path);
                 if (!match && !partialMatch) {
                     continue;
                 }
                 // Stat
-                const stats = yield internal_globber_await(lib_internal_globber_DefaultGlobber.stat(item, options, traversalChain)
+                const stats = yield internal_globber_await(internal_globber_DefaultGlobber.stat(item, options, traversalChain)
                 // Broken symlink, or symlink cycle detected, or no longer exists
                 );
                 // Broken symlink, or symlink cycle detected, or no longer exists
@@ -92350,13 +92357,13 @@ class lib_internal_globber_DefaultGlobber {
                     continue;
                 }
                 // Hidden file or directory?
-                if (options.excludeHiddenFiles && path.basename(item.path).match(/^\./)) {
+                if (options.excludeHiddenFiles && external_path_.basename(item.path).match(/^\./)) {
                     continue;
                 }
                 // Directory
                 if (stats.isDirectory()) {
                     // Matched
-                    if (match & MatchKind.Directory && options.matchDirectories) {
+                    if (match & internal_match_kind_MatchKind.Directory && options.matchDirectories) {
                         yield yield internal_globber_await(item.path);
                     }
                     // Descend?
@@ -92365,11 +92372,11 @@ class lib_internal_globber_DefaultGlobber {
                     }
                     // Push the child items in reverse
                     const childLevel = item.level + 1;
-                    const childItems = (yield internal_globber_await(fs.promises.readdir(item.path))).map(x => new SearchState(path.join(item.path, x), childLevel));
+                    const childItems = (yield internal_globber_await(external_fs_namespaceObject.promises.readdir(item.path))).map(x => new internal_search_state_SearchState(external_path_.join(item.path, x), childLevel));
                     stack.push(...childItems.reverse());
                 }
                 // File
-                else if (match & MatchKind.File) {
+                else if (match & internal_match_kind_MatchKind.File) {
                     yield yield internal_globber_await(item.path);
                 }
             }
@@ -92380,7 +92387,7 @@ class lib_internal_globber_DefaultGlobber {
      */
     static create(patterns, options) {
         return lib_internal_globber_awaiter(this, void 0, void 0, function* () {
-            const result = new lib_internal_globber_DefaultGlobber(options);
+            const result = new internal_globber_DefaultGlobber(options);
             if (lib_internal_globber_IS_WINDOWS) {
                 patterns = patterns.replace(/\r\n/g, '\n');
                 patterns = patterns.replace(/\r/g, '\n');
@@ -92393,10 +92400,10 @@ class lib_internal_globber_DefaultGlobber {
                 }
                 // Pattern
                 else {
-                    result.patterns.push(new Pattern(line));
+                    result.patterns.push(new internal_pattern_Pattern(line));
                 }
             }
-            result.searchPaths.push(...patternHelper.getSearchPaths(result.patterns));
+            result.searchPaths.push(...internal_pattern_helper_getSearchPaths(result.patterns));
             return result;
         });
     }
@@ -92409,12 +92416,12 @@ class lib_internal_globber_DefaultGlobber {
             if (options.followSymbolicLinks) {
                 try {
                     // Use `stat` (following symlinks)
-                    stats = yield fs.promises.stat(item.path);
+                    stats = yield external_fs_namespaceObject.promises.stat(item.path);
                 }
                 catch (err) {
                     if (err.code === 'ENOENT') {
                         if (options.omitBrokenSymbolicLinks) {
-                            core.debug(`Broken symlink '${item.path}'`);
+                            core_debug(`Broken symlink '${item.path}'`);
                             return undefined;
                         }
                         throw new Error(`No information found for the path '${item.path}'. This may indicate a broken symbolic link.`);
@@ -92424,19 +92431,19 @@ class lib_internal_globber_DefaultGlobber {
             }
             else {
                 // Use `lstat` (not following symlinks)
-                stats = yield fs.promises.lstat(item.path);
+                stats = yield external_fs_namespaceObject.promises.lstat(item.path);
             }
             // Note, isDirectory() returns false for the lstat of a symlink
             if (stats.isDirectory() && options.followSymbolicLinks) {
                 // Get the realpath
-                const realPath = yield fs.promises.realpath(item.path);
+                const realPath = yield external_fs_namespaceObject.promises.realpath(item.path);
                 // Fixup the traversal chain to match the item level
                 while (traversalChain.length >= item.level) {
                     traversalChain.pop();
                 }
                 // Test for a cycle
                 if (traversalChain.some((x) => x === realPath)) {
-                    core.debug(`Symlink cycle detected for path '${item.path}' and realpath '${realPath}'`);
+                    core_debug(`Symlink cycle detected for path '${item.path}' and realpath '${realPath}'`);
                     return undefined;
                 }
                 // Update the traversal chain
@@ -92544,7 +92551,7 @@ var lib_glob_awaiter = (undefined && undefined.__awaiter) || function (thisArg, 
  */
 function glob_create(patterns, options) {
     return lib_glob_awaiter(this, void 0, void 0, function* () {
-        return yield DefaultGlobber.create(patterns, options);
+        return yield internal_globber_DefaultGlobber.create(patterns, options);
     });
 }
 /**
@@ -92880,7 +92887,567 @@ function isCacheFeatureAvailable() {
     return false;
 }
 
+;// CONCATENATED MODULE: ./src/custom/utils.ts
+
+
+
+
+
+
+
+
+// from https://github.com/actions/toolkit/blob/main/packages/cache/src/internal/constants.ts
+const utils_ManifestFilename = 'manifest.txt';
+const utils_TarFilename = 'cache.tar';
+// The default path of GNUtar on hosted Windows runners
+const utils_GnuTarPathOnWindows = `${process.env['PROGRAMFILES']}\\Git\\usr\\bin\\tar.exe`;
+// The default path of BSDtar on hosted Windows runners
+const utils_SystemTarPathOnWindows = `${process.env['SYSTEMDRIVE']}\\Windows\\System32\\tar.exe`;
+var utils_CacheFilename;
+(function (CacheFilename) {
+    CacheFilename["Gzip"] = "cache.tgz";
+    CacheFilename["Zstd"] = "cache.tzst";
+})(utils_CacheFilename || (utils_CacheFilename = {}));
+var utils_CompressionMethod;
+(function (CompressionMethod) {
+    CompressionMethod["Gzip"] = "gzip";
+    // Long range mode was added to zstd in v1.3.2.
+    // This enum is for earlier version of zstd that does not have --long support
+    CompressionMethod["ZstdWithoutLong"] = "zstd-without-long";
+    CompressionMethod["Zstd"] = "zstd";
+})(utils_CompressionMethod || (utils_CompressionMethod = {}));
+var utils_ArchiveToolType;
+(function (ArchiveToolType) {
+    ArchiveToolType["GNU"] = "gnu";
+    ArchiveToolType["BSD"] = "bsd";
+})(utils_ArchiveToolType || (utils_ArchiveToolType = {}));
+// from https://github.com/actions/toolkit/blob/main/packages/cache/src/internal/cacheUtils.ts
+function utils_getArchiveFileSizeInBytes(filePath) {
+    return external_fs_namespaceObject.statSync(filePath).size;
+}
+async function utils_unlinkFile(filePath) {
+    return (0,external_util_.promisify)(external_fs_namespaceObject.unlink)(filePath);
+}
+async function utils_getVersion(app, additionalArgs = []) {
+    let versionOutput = '';
+    additionalArgs.push('--version');
+    core_debug(`Checking ${app} ${additionalArgs.join(' ')}`);
+    try {
+        await exec_exec(`${app}`, additionalArgs, {
+            ignoreReturnCode: true,
+            silent: true,
+            listeners: {
+                stdout: (data) => (versionOutput += data.toString()),
+                stderr: (data) => (versionOutput += data.toString())
+            }
+        });
+    }
+    catch (err) {
+        core_debug(err.message);
+    }
+    versionOutput = versionOutput.trim();
+    core_debug(versionOutput);
+    return versionOutput;
+}
+async function utils_resolvePaths(patterns) {
+    const paths = [];
+    const workspace = process.env['GITHUB_WORKSPACE'] ?? process.cwd();
+    const globber = await glob_create(patterns.join('\n'), {
+        implicitDescendants: false
+    });
+    for await (const file of globber.globGenerator()) {
+        const relativeFile = external_path_.relative(workspace, file)
+            .replace(new RegExp(`\\${external_path_.sep}`, 'g'), '/');
+        core_debug(`Matched: ${relativeFile}`);
+        // Paths are made relative so the tar entries are all relative to the root of the workspace.
+        if (relativeFile === '') {
+            // path.relative returns empty string if workspace and file are equal
+            paths.push('.');
+        }
+        else {
+            paths.push(`${relativeFile}`);
+        }
+    }
+    return paths;
+}
+async function utils_createTempDirectory() {
+    const IS_WINDOWS = process.platform === 'win32';
+    let tempDirectory = process.env['RUNNER_TEMP'] || '';
+    if (!tempDirectory) {
+        let baseLocation;
+        if (IS_WINDOWS) {
+            // On Windows use the USERPROFILE env variable
+            baseLocation = process.env['USERPROFILE'] || 'C:\\';
+        }
+        else {
+            if (process.platform === 'darwin') {
+                baseLocation = '/Users';
+            }
+            else {
+                baseLocation = '/home';
+            }
+        }
+        tempDirectory = external_path_.join(baseLocation, 'actions', 'temp');
+    }
+    const dest = external_path_.join(tempDirectory, crypto.randomUUID());
+    await mkdirP(dest);
+    return dest;
+}
+// Use zstandard if possible to maximize cache performance
+async function utils_getCompressionMethod() {
+    const versionOutput = await utils_getVersion('zstd', ['--quiet']);
+    const version = semver.clean(versionOutput);
+    core_debug(`zstd version: ${version}`);
+    if (versionOutput === '') {
+        return utils_CompressionMethod.Gzip;
+    }
+    else {
+        return utils_CompressionMethod.ZstdWithoutLong;
+    }
+}
+function utils_getCacheFileName(compressionMethod) {
+    return compressionMethod === utils_CompressionMethod.Gzip
+        ? utils_CacheFilename.Gzip
+        : utils_CacheFilename.Zstd;
+}
+async function utils_getGnuTarPathOnWindows() {
+    if (external_fs_namespaceObject.existsSync(utils_GnuTarPathOnWindows)) {
+        return utils_GnuTarPathOnWindows;
+    }
+    const versionOutput = await utils_getVersion('tar');
+    return versionOutput.toLowerCase().includes('gnu tar') ? which('tar') : '';
+}
+// from https://github.com/actions/toolkit/blob/main/packages/cache/src/internal/tar.ts
+const utils_IS_WINDOWS = process.platform === 'win32';
+function utils_getWorkingDirectory() {
+    return process.env['GITHUB_WORKSPACE'] ?? process.cwd();
+}
+// Returns tar path and type: BSD or GNU
+async function utils_getTarPath() {
+    switch (process.platform) {
+        case 'win32': {
+            const gnuTar = await utils_getGnuTarPathOnWindows();
+            const systemTar = utils_SystemTarPathOnWindows;
+            if (gnuTar) {
+                // Use GNUtar as default on windows
+                return { path: gnuTar, type: utils_ArchiveToolType.GNU };
+            }
+            else if (external_fs_namespaceObject.existsSync(systemTar)) {
+                return { path: systemTar, type: utils_ArchiveToolType.BSD };
+            }
+            break;
+        }
+        case 'darwin': {
+            const gnuTar = await which('gtar', false);
+            if (gnuTar) {
+                // fix permission denied errors when extracting BSD tar archive with GNU tar - https://github.com/actions/cache/issues/527
+                return { path: gnuTar, type: utils_ArchiveToolType.GNU };
+            }
+            else {
+                return {
+                    path: await which('tar', true),
+                    type: utils_ArchiveToolType.BSD
+                };
+            }
+        }
+        default:
+            break;
+    }
+    // Default assumption is GNU tar is present in path
+    return {
+        path: await which('tar', true),
+        type: utils_ArchiveToolType.GNU
+    };
+}
+// Common function for extractTar and listTar to get the compression method
+async function utils_getDecompressionProgram(tarPath, compressionMethod, archivePath) {
+    // -d: Decompress.
+    // unzstd is equivalent to 'zstd -d'
+    // --long=#: Enables long distance matching with # bits. Maximum is 30 (1GB) on 32-bit OS and 31 (2GB) on 64-bit.
+    // Using 30 here because we also support 32-bit self-hosted runners.
+    const BSD_TAR_ZSTD = tarPath.type === utils_ArchiveToolType.BSD &&
+        compressionMethod !== utils_CompressionMethod.Gzip &&
+        utils_IS_WINDOWS;
+    switch (compressionMethod) {
+        case utils_CompressionMethod.Zstd:
+            return BSD_TAR_ZSTD
+                ? [
+                    'zstd -d --long=30 --force -o',
+                    utils_TarFilename,
+                    archivePath.replace(new RegExp(`\\${external_path_.sep}`, 'g'), '/')
+                ]
+                : [
+                    '--use-compress-program',
+                    utils_IS_WINDOWS ? '"zstd -d --long=30"' : 'unzstd --long=30'
+                ];
+        case utils_CompressionMethod.ZstdWithoutLong:
+            return BSD_TAR_ZSTD
+                ? [
+                    'zstd -d --force -o',
+                    utils_TarFilename,
+                    archivePath.replace(new RegExp(`\\${external_path_.sep}`, 'g'), '/')
+                ]
+                : ['--use-compress-program', utils_IS_WINDOWS ? '"zstd -d"' : 'unzstd'];
+        default:
+            return ['-z'];
+    }
+}
+// Used for creating the archive
+// -T#: Compress using # working thread. If # is 0, attempt to detect and use the number of physical CPU cores.
+// zstdmt is equivalent to 'zstd -T0'
+// --long=#: Enables long distance matching with # bits. Maximum is 30 (1GB) on 32-bit OS and 31 (2GB) on 64-bit.
+// Using 30 here because we also support 32-bit self-hosted runners.
+// Long range mode is added to zstd in v1.3.2 release, so we will not use --long in older version of zstd.
+async function utils_getCompressionProgram(tarPath, compressionMethod) {
+    const cacheFileName = utils_getCacheFileName(compressionMethod);
+    const BSD_TAR_ZSTD = tarPath.type === utils_ArchiveToolType.BSD &&
+        compressionMethod !== utils_CompressionMethod.Gzip &&
+        utils_IS_WINDOWS;
+    switch (compressionMethod) {
+        case utils_CompressionMethod.Zstd:
+            return BSD_TAR_ZSTD
+                ? [
+                    'zstd -T0 --long=30 --force -o',
+                    cacheFileName.replace(new RegExp(`\\${external_path_.sep}`, 'g'), '/'),
+                    utils_TarFilename
+                ]
+                : [
+                    '--use-compress-program',
+                    utils_IS_WINDOWS ? '"zstd -T0 --long=30"' : 'zstdmt --long=30'
+                ];
+        case utils_CompressionMethod.ZstdWithoutLong:
+            return BSD_TAR_ZSTD
+                ? [
+                    'zstd -T0 --force -o',
+                    cacheFileName.replace(new RegExp(`\\${external_path_.sep}`, 'g'), '/'),
+                    utils_TarFilename
+                ]
+                : ['--use-compress-program', utils_IS_WINDOWS ? '"zstd -T0"' : 'zstdmt'];
+        default:
+            return ['-z'];
+    }
+}
+// Return arguments for tar as per tarPath, compressionMethod, method type and os
+async function utils_getTarArgs(tarPath, compressionMethod, type, archivePath = '') {
+    const args = [`"${tarPath.path}"`];
+    //const cacheFileName = utils.getCacheFileName(compressionMethod)
+    const cacheFileName = utils_getCacheFileName(compressionMethod);
+    const tarFile = 'cache.tar';
+    const workingDirectory = utils_getWorkingDirectory();
+    // Speficic args for BSD tar on windows for workaround
+    const BSD_TAR_ZSTD = tarPath.type === utils_ArchiveToolType.BSD &&
+        compressionMethod !== utils_CompressionMethod.Gzip &&
+        utils_IS_WINDOWS;
+    // Method specific args
+    switch (type) {
+        case 'create':
+            args.push('--posix', '-cf', BSD_TAR_ZSTD
+                ? tarFile
+                : cacheFileName.replace(new RegExp(`\\${external_path_.sep}`, 'g'), '/'), '--exclude', BSD_TAR_ZSTD
+                ? tarFile
+                : cacheFileName.replace(new RegExp(`\\${external_path_.sep}`, 'g'), '/'), '-P', '-C', workingDirectory.replace(new RegExp(`\\${external_path_.sep}`, 'g'), '/'), '--files-from', utils_ManifestFilename);
+            break;
+        case 'extract':
+            args.push('-xf', BSD_TAR_ZSTD
+                ? tarFile
+                : archivePath.replace(new RegExp(`\\${external_path_.sep}`, 'g'), '/'), '-P', '-C', workingDirectory.replace(new RegExp(`\\${external_path_.sep}`, 'g'), '/'));
+            break;
+        case 'list':
+            args.push('-tf', BSD_TAR_ZSTD
+                ? tarFile
+                : archivePath.replace(new RegExp(`\\${external_path_.sep}`, 'g'), '/'), '-P');
+            break;
+    }
+    // Platform specific args
+    if (tarPath.type === utils_ArchiveToolType.GNU) {
+        switch (process.platform) {
+            case 'win32':
+                args.push('--force-local');
+                break;
+            case 'darwin':
+                args.push('--delay-directory-restore');
+                break;
+        }
+    }
+    return args;
+}
+// Returns commands to run tar and compression program
+async function utils_getCommands(compressionMethod, type, archivePath = '') {
+    let args;
+    const tarPath = await utils_getTarPath();
+    const tarArgs = await utils_getTarArgs(tarPath, compressionMethod, type, archivePath);
+    const compressionArgs = type !== 'create'
+        ? await utils_getDecompressionProgram(tarPath, compressionMethod, archivePath)
+        : await utils_getCompressionProgram(tarPath, compressionMethod);
+    const BSD_TAR_ZSTD = tarPath.type === utils_ArchiveToolType.BSD &&
+        compressionMethod !== utils_CompressionMethod.Gzip &&
+        utils_IS_WINDOWS;
+    if (BSD_TAR_ZSTD && type !== 'create') {
+        args = [[...compressionArgs].join(' '), [...tarArgs].join(' ')];
+    }
+    else {
+        args = [[...tarArgs].join(' '), [...compressionArgs].join(' ')];
+    }
+    if (BSD_TAR_ZSTD) {
+        return args;
+    }
+    return [args.join(' ')];
+}
+// Executes all commands as separate processes
+async function utils_execCommands(commands, cwd) {
+    for (const command of commands) {
+        try {
+            await exec_exec(command, undefined, {
+                cwd,
+                env: { ...process.env, MSYS: 'winsymlinks:nativestrict' }
+            });
+        }
+        catch (error) {
+            throw new Error(`${command.split(' ')[0]} failed with error: ${error?.message}`);
+        }
+    }
+}
+// List the contents of a tar
+async function utils_listTar(archivePath, compressionMethod) {
+    const commands = await utils_getCommands(compressionMethod, 'list', archivePath);
+    await utils_execCommands(commands);
+}
+// Extract a tar
+async function utils_extractTar(archivePath, compressionMethod) {
+    // Create directory to extract tar into
+    const workingDirectory = utils_getWorkingDirectory();
+    await io.mkdirP(workingDirectory);
+    const commands = await utils_getCommands(compressionMethod, 'extract', archivePath);
+    await utils_execCommands(commands);
+}
+// Create a tar
+async function utils_createTar(archiveFolder, sourceDirectories, compressionMethod) {
+    // Write source directories to manifest.txt to avoid command length limits
+    external_fs_namespaceObject.writeFileSync(external_path_.join(archiveFolder, utils_ManifestFilename), sourceDirectories.join('\n'));
+    const commands = await utils_getCommands(compressionMethod, 'create');
+    await utils_execCommands(commands, archiveFolder);
+}
+
+;// CONCATENATED MODULE: ./src/custom/backend.ts
+
+
+
+async function getArchiveLocation() {
+    const cacheTopDir = process.env["GHRUNNER_CACHE"];
+    if (!cacheTopDir) {
+        warning('getArchiveLocation: cache not available');
+        return undefined;
+    }
+    const repo = process.env["GITHUB_REPOSITORY"];
+    const ref = process.env["GITHUB_REF_NAME"];
+    const cacheDir = external_path_.join(cacheTopDir, repo, ref);
+    core_debug(`getArchiveLocation: ${cacheDir}`);
+    return cacheDir;
+}
+async function getCacheFile(key) {
+    const archiveLocation = await getArchiveLocation();
+    //core.info(`getCacheFile: archiveLocation = ${archiveLocation}`);
+    if (!archiveLocation) {
+        return undefined;
+    }
+    const cacheFile = path.join(archiveLocation, key);
+    try {
+        const fileStat = await fs.stat(cacheFile);
+        if (fileStat.isFile() && fileStat.size > 0) {
+            core.debug(`getCacheFile: found ${cacheFile}`);
+            return cacheFile;
+        }
+        else {
+            core.debug(`getCacheFile: ${cacheFile} not found`);
+            return undefined;
+        }
+    }
+    catch (error) {
+        core.debug(`getCacheFile: ${error}`);
+        core.debug(`getCacheFile: ${cacheFile} not found`);
+        return undefined;
+    }
+}
+async function backend_downloadCache(cacheFile, archivePath) {
+    await fs.copyFile(cacheFile, archivePath);
+}
+async function backend_saveCache(key, archivePath) {
+    const archiveLocation = await getArchiveLocation();
+    //core.info(`saveCache: archiveLocation = ${archiveLocation}`);
+    if (archiveLocation) {
+        const cacheFile = external_path_.join(archiveLocation, key);
+        try {
+            const dir = await external_fs_namespaceObject.promises.mkdir(external_path_.dirname(cacheFile), { recursive: true, mode: '0775' });
+            core_debug(`saveCache: dir created: ${dir}`);
+            await external_fs_namespaceObject.promises.copyFile(archivePath, cacheFile);
+            core_debug(`saveCache: saved ${archivePath} to ${cacheFile}`);
+        }
+        catch (error) {
+            warning(`saveCache: failed to save archive: ${error}`);
+        }
+    }
+}
+
+;// CONCATENATED MODULE: ./src/custom/cache.ts
+// https://github.com/actions/toolkit/blob/main/packages/cache/src/cache.ts
+
+
+
+
+const cache_CacheFileSizeLimit = 10 * Math.pow(1024, 3); // 10GiB
+/**
+ * isFeatureAvailable to check the presence of Actions cache service
+ *
+ * @returns boolean return true if Actions cache service feature is available, otherwise false
+ */
+function cache_isFeatureAvailable() {
+    return !!process.env['GHRUNNER_CACHE'];
+}
+class cache_ValidationError extends Error {
+    constructor(message) {
+        super(message);
+        this.name = 'ValidationError';
+        Object.setPrototypeOf(this, cache_ValidationError.prototype);
+    }
+}
+function cache_checkPaths(paths) {
+    if (!paths || paths.length === 0) {
+        throw new cache_ValidationError(`Path Validation Error: At least one directory or file path is required`);
+    }
+}
+function cache_checkKey(key) {
+    if (key.length > 512) {
+        throw new cache_ValidationError(`Key Validation Error: ${key} cannot be larger than 512 characters.`);
+    }
+    const regex = /^[^,]*$/;
+    if (!regex.test(key)) {
+        throw new cache_ValidationError(`Key Validation Error: ${key} cannot contain commas.`);
+    }
+}
+/**
+ * Restores cache from keys
+ *
+ * @param paths a list of file paths to restore from the cache
+ * @param primaryKey an explicit key for restoring the cache
+ * @param restoreKeys an optional ordered list of keys to use for restoring the cache if no cache hit occurred for key
+ * @param downloadOptions cache download options
+ * @param enableCrossOsArchive an optional boolean enabled to restore on windows any cache created on any platform
+ * @returns string returns the key for the cache hit, otherwise returns undefined
+ */
+async function cache_restoreCache(paths, primaryKey, restoreKeys, options, enableCrossOsArchive = false) {
+    cache_checkPaths(paths);
+    restoreKeys = restoreKeys || [];
+    const keys = [primaryKey, ...restoreKeys];
+    core.debug('Resolved Keys:');
+    core.debug(JSON.stringify(keys));
+    if (keys.length > 10) {
+        throw new cache_ValidationError(`Key Validation Error: Keys are limited to a maximum of 10.`);
+    }
+    for (const key of keys) {
+        cache_checkKey(key);
+    }
+    let archivePath = '';
+    const cacheFile = await backend.getCacheFile(primaryKey);
+    if (!cacheFile) {
+        core.debug(`Cache not found for key: ${primaryKey}`);
+        return undefined;
+    }
+    core.info(`Cache hit for: ${primaryKey}`);
+    if (options?.lookupOnly) {
+        core.info('Lookup only - skipping download');
+        return primaryKey;
+    }
+    const compressionMethod = await utils.getCompressionMethod();
+    archivePath = path.join(await utils.createTempDirectory(), utils.getCacheFileName(compressionMethod));
+    core.debug(`Archive Path: ${archivePath}`);
+    // Download the cache from the cache entry
+    try {
+        await backend.downloadCache(cacheFile, archivePath);
+        const archiveFileSize = utils.getArchiveFileSizeInBytes(archivePath);
+        core.info(`Cache Size: ~${Math.round(archiveFileSize / (1024 * 1024))} MB (${archiveFileSize} B)`);
+        if (core.isDebug()) {
+            await utils.listTar(archivePath, compressionMethod);
+        }
+        await utils.extractTar(archivePath, compressionMethod);
+        core.info('Cache restored successfully');
+        return primaryKey;
+    }
+    catch (error) {
+        core.warning(`Failed to restore: ${error.message}`);
+        return undefined;
+    }
+    finally {
+        // Try to delete the archive to save space
+        try {
+            await utils.unlinkFile(archivePath);
+        }
+        catch (error) {
+            core.debug(`Failed to delete archive: ${error}`);
+        }
+    }
+    return undefined;
+}
+/**
+ * Saves a list of files with the specified key
+ *
+ * @param paths a list of file paths to be cached
+ * @param key an explicit key for restoring the cache
+ * @param options cache upload options
+ * @param enableCrossOsArchive an optional boolean enabled to save cache on windows which could be restored on any platform
+ * @returns number returns cacheId if the cache was saved successfully and throws an error if save fails
+ */
+async function custom_cache_saveCache(paths, key, options, enableCrossOsArchive = false) {
+    cache_checkPaths(paths);
+    cache_checkKey(key);
+    const compressionMethod = await utils_getCompressionMethod();
+    let cacheId = -1;
+    const cachePaths = await utils_resolvePaths(paths);
+    core_debug('Cache Paths:');
+    core_debug(`${JSON.stringify(cachePaths)}`);
+    if (cachePaths.length === 0) {
+        throw new Error(`Path Validation Error: Path(s) specified in the action for caching do(es) not exist, hence no cache is being saved.`);
+    }
+    const archiveFolder = await utils_createTempDirectory();
+    const archivePath = external_path_.join(archiveFolder, utils_getCacheFileName(compressionMethod));
+    core_debug(`Archive Path: ${archivePath}`);
+    try {
+        await utils_createTar(archiveFolder, cachePaths, compressionMethod);
+        if (isDebug()) {
+            await utils_listTar(archivePath, compressionMethod);
+        }
+        // check file size
+        const archiveFileSize = utils_getArchiveFileSizeInBytes(archivePath);
+        core_debug(`File Size: ${archiveFileSize}`);
+        if (archiveFileSize > cache_CacheFileSizeLimit) {
+            throw new Error(`Cache size of ~${Math.round(archiveFileSize / (1024 * 1024))} MB (${archiveFileSize} B) is over the ${Math.round(cache_CacheFileSizeLimit / (1024 * 1024))} MB (${cache_CacheFileSizeLimit} B) limit, not saving cache.`);
+        }
+        await backend_saveCache(key, archivePath);
+        // dummy cacheId, if we get there without raising, it means the cache has been saved
+        cacheId = 1;
+    }
+    catch (error) {
+        const typedError = error;
+        if (typedError.name === cache_ValidationError.name) {
+            throw error;
+        }
+        else {
+            warning(`Failed to save: ${typedError.message}`);
+        }
+    }
+    finally {
+        // Try to delete the archive to save space
+        try {
+            await utils_unlinkFile(archivePath);
+        }
+        catch (error) {
+            core_debug(`Failed to delete archive: ${error}`);
+        }
+    }
+    return cacheId;
+}
+
 ;// CONCATENATED MODULE: ./src/cache-save.ts
+
 
 
 
@@ -92894,6 +93461,8 @@ process.on('uncaughtException', e => {
 });
 // Added early exit to resolve issue with slow post action step:
 async function run(earlyExit) {
+    const baseTag = 'v7.0.0';
+    info(`sgnus-k8s/setup-node@use-cache: based on actions/setup-node@${baseTag}`);
     try {
         const cacheLock = getState(State.CachePackageManager);
         if (cacheLock) {
@@ -92929,7 +93498,13 @@ const cachePackages = async (packageManager) => {
         info(`Cache hit occurred on the primary key ${primaryKey}, not saving cache.`);
         return;
     }
-    const cacheId = await cache_saveCache(cachePaths, primaryKey);
+    let cacheId;
+    if (getBooleanInput('custom')) {
+        cacheId = await custom_cache_saveCache(cachePaths, primaryKey);
+    }
+    else {
+        cacheId = await cache_saveCache(cachePaths, primaryKey);
+    }
     if (cacheId === -1) {
         // saveCache returns -1 without throwing when the cache was not saved, e.g.
         // a reserve collision or a read-only token (fork PR). @actions/cache has
