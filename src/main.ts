@@ -14,7 +14,7 @@ import {State} from './constants.js';
 import * as custom from "./custom/cache.js";
 
 export async function run() {
-  const baseTag = 'v7.0.0';
+  const baseTag = 'v7.1.0';
   core.info(`sgnus-k8s/setup-node@use-cache: based on actions/setup-node@${baseTag}`);
   try {
     //
@@ -123,7 +123,9 @@ function resolveVersionInput(): string {
   }
 
   if (versionFileInput) {
-    const versionFilePath = path.join(
+    // `path.resolve` (unlike `path.join`) keeps an already-absolute input as-is,
+    // so a composite action can pass `${{ github.action_path }}/.nvmrc`.
+    const versionFilePath = path.resolve(
       process.env.GITHUB_WORKSPACE!,
       versionFileInput
     );

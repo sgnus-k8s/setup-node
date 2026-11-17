@@ -16,7 +16,7 @@ process.on('uncaughtException', e => {
 
 // Added early exit to resolve issue with slow post action step:
 export async function run(earlyExit?: boolean) {
-  const baseTag = 'v7.0.0';
+  const baseTag = 'v7.1.0';
   core.info(`sgnus-k8s/setup-node@use-cache: based on actions/setup-node@${baseTag}`);
   try {
     const cacheLock = core.getState(State.CachePackageManager);
@@ -57,7 +57,7 @@ const cachePackages = async (packageManager: string) => {
     );
   }
 
-  if (primaryKey === state && !core.getBooleanInput('cache-overwite') {
+  if (primaryKey === state && !core.getBooleanInput('cache-overwite')) {
     core.info(
       `Cache hit occurred on the primary key ${primaryKey}, not saving cache.`
     );
