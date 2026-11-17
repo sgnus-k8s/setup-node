@@ -57,7 +57,7 @@ const cachePackages = async (packageManager: string) => {
     );
   }
 
-  if (primaryKey === state && !core.getBooleanInput('cache-overwite')) {
+  if (primaryKey === state && !core.getBooleanInput('cache-overwrite')) {
     core.info(
       `Cache hit occurred on the primary key ${primaryKey}, not saving cache.`
     );
