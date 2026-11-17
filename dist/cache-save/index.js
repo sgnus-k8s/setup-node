@@ -93035,7 +93035,7 @@ const cachePackages = async (packageManager) => {
         const cacheDependencyPath = getInput('cache-dependency-path') || '';
         throw new Error(`Cache folder paths are not retrieved for ${packageManager} with cache-dependency-path = ${cacheDependencyPath}`);
     }
-    if (primaryKey === state && !getBooleanInput('cache-overwite')) {
+    if (primaryKey === state && !getBooleanInput('cache-overwrite')) {
         info(`Cache hit occurred on the primary key ${primaryKey}, not saving cache.`);
         return;
     }
